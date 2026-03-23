@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>Business Genius Quiz 🧠</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body {
+      background:#0f1117;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      font-family:'Segoe UI', sans-serif;
+      color:#fff;
+      padding:20px;
+    }
+    .card {
+      background:#1a1d2e;
+      border-radius:20px;
+      padding:32px 24px;
+      max-width:380px;
+      width:100%;
+      box-shadow:0 8px 40px rgba(0,0,0,0.4);
+      text-align:center;
+      border:1px solid #2a2d3e;
+    }
+    .badge {
+      display:inline-block;
+      background:#2a1f00;
+      color:#f7c948;
+      font-size:0.75rem;
+      letter-spacing:2px;
+      text-transform:uppercase;
+      padding:4px 14px;
+      border-radius:20px;
+      margin-bottom:16px;
+      border:1px solid #f7c94844;
+    }
+    h1 { font-size:1.5rem; color:#fff; margin-bottom:6px; }
+    .subtitle { color:#888; font-size:0.9rem; margin-bottom:24px; }
+    .progress-bar {
+      background:#2a2d3e;
+      border-radius:10px;
+      height:6px;
+      margin-bottom:24px;
+      overflow:hidden;
+    }
+    .progress-fill {
+      height:100%;
+      background:linear-gradient(90deg,#f7c948,#ff9800);
+      border-radius:10px;
+      transition:width 0.4s ease;
+    }
+    .question-num { color:#888; font-size:0.8rem; margin-bottom:8px; }
+    .question { font-size:1.15rem; color:#fff; line-height:1.5; margin-bottom:24px; min-height:60px; }
+    .options { display:flex; flex-direction:column; gap:12px; }
+    .opt {
+      background:#22253a;
+      border:2px solid #2a2d4a;
+      border-radius:12px;
+      padding:14px 18px;
+      text-align:left;
+      color:#ddd;
+      cursor:pointer;
+      font-size:0.95rem;
+      transition:all 0.15s;
+      line-height:1.4;
+    }
+    .opt:active, .opt:hover { border-color:#f7c948; color:#fff; background:#2a2d4a; }
+    .opt.correct { border-color:#4caf50; background:#1a3a1a; color:#a5d6a7; }
+    .opt.wrong { border-color:#ef5350; background:#3a1a1a; color:#ef9a9a; }
+    .opt.disabled { pointer-events:none; }
+    .feedback {
+      margin-top:20px;
+      padding:14px 18px;
+      border-radius:12px;
+      font-size:0.95rem;
+      line-height:1.5;
+      display:none;
+    }
+    .feedback.good { background:#1a3a1a; border:1px solid #4caf50; color:#a5d6a7; }
+    .feedback.roast { background:#2a1a00; border:1px solid #ff9800; color:#ffcc80; font-style:italic; }
+    .feedback.savage { background:#3a0a0a; border:1px solid #ef5350; color:#ff8a80; }
+    .next-btn {
+      margin-top:16px;
+      padding:12px 32px;
+      background:#f7c948;
+      color:#0f1117;
+      border:none;
+      border-radius:30px;
+      font-size:1rem;
+      font-weight:bold;
+      cursor:pointer;
+      display:none;
+    }
+    .next-btn:active { transform:scale(0.97); }
+    /* Result screen */
+    #result { display:none; text-align:center; }
+    #result .big-emoji { font-size:4rem; margin-bottom:16px; }
+    #result h2 { font-size:1.6rem; color:#f7c948; margin-bottom:8px; }
+    #result .roast-final {
+      background:#1a1000;
+      border:1px solid #ff980044;
+      border-radius:12px;
+      padding:16px;
+      color:#ffcc80;
+      font-size:0.95rem;
+      line-height:1.7;
+      margin:16px 0;
+      text-align:left;
+    }
+    #result .roast-final b { color:#f7c948; }
+    .restart-btn {
+      padding:12px 28px;
+      background:transparent;
+      color:#888;
+      border:1px solid #444;
+      border-radius:30px;
+      font-size:0.9rem;
+      cursor:pointer;
+      margin-top:8px;
+    }
+    .score-line { color:#888; font-size:0.9rem; margin-bottom:4px; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div id="quiz-screen">
+    <div class="badge">🧠 IQ Test for Future CEOs</div>
+    <h1>Business Genius Quiz</h1>
+    <p class="subtitle">Are you cut out for commerce?</p>
+    <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+    <div class="question-num" id="qnum">Question 1 of 6</div>
+    <div class="question" id="qtext"></div>
+    <div class="options" id="opts"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next →</button>
+  </div>
+  <div id="result">
+    <div class="big-emoji" id="result-emoji">📊</div>
+    <h2 id="result-title"></h2>
+    <div class="score-line" id="result-score"></div>
+    <div class="roast-final" id="result-roast"></div>
+    <button class="restart-btn" onclick="restart()">Try Again (you'll still fail 😂)</button>
+  </div>
+</div>
+
+<script>
+const questions = [
+  // Q1 - Normal warm-up
+  {
+    q: "What does GDP stand for?",
+    opts: ["Gross Domestic Product", "General Demand Pricing", "Global Development Plan", "Grand Desi Paisa"],
+    correct: 0,
+    phase: "normal",
+    feedback: {
+      correct: "✅ Correct! Off to a great start, future CFO!",
+      wrong: "GDP = Gross Domestic Product. Don't worry, you've got 5 more chances to embarrass yourself."
+    }
+  },
+  // Q2 - Still normal
+  {
+    q: "A company's revenue is ₹10L and expenses are ₹8L. What's the profit?",
+    opts: ["₹2L", "₹18L", "₹10L", "I need a CA for this"],
+    correct: 0,
+    phase: "normal",
+    feedback: {
+      correct: "✅ Basic arithmetic — you passed Class 4 math. Impressive.",
+      wrong: "₹10L - ₹8L = ₹2L. This is literally subtraction. 😬"
+    }
+  },
+  // Q3 - The turn begins 😈
+  {
+    q: "You've been studying commerce for 3 years. Your richest friend studied... what?",
+    opts: ["Computer Science 💻", "Commerce 📊", "Arts 🎨", "He dropped out 💀"],
+    correct: 3,
+    phase: "roast",
+    feedback: {
+      correct: "💀 You know it's true. Dropouts are out there printing money while you memorize debit/credit rules.",
+      wrong: "Aww you picked Commerce? Adorable. Meanwhile Zuckerberg, Gates, and Dell all dropped out. Just saying. 🙂"
+    }
+  },
+  // Q4 - Getting savage
+  {
+    q: "You spent 2 years learning accountancy. A computer does your job in how many seconds?",
+    opts: ["0.3 seconds ⚡", "5 minutes", "1 hour", "It can't, I'm irreplaceable!"],
+    correct: 0,
+    phase: "roast",
+    feedback: {
+      correct: "😬 Correct. Tally, Excel, QuickBooks, Zoho — all waiting to replace you before your first salary.",
+      wrong: "0.3 seconds. A ₹499/month subscription does in milliseconds what took you 2 years to learn. Sleep tight! 🥲"
+    }
+  },
+  // Q5 - Full roast mode
+  {
+    q: "What's the REAL reason Commerce students chose Commerce?",
+    opts: [
+      "Passion for finance 💼",
+      "Math was too hard in Science 😅",
+      "Parents said it's 'safe' 🙏",
+      "CA > Everything, bro"],
+    correct: 1,
+    phase: "savage",
+    feedback: {
+      correct: "💀 THE HONESTY. Maths had 3 marks from calculus and you ran straight to accountancy. Respect for admitting it.",
+      wrong: "Sure, sure. 'Passion for finance.' Nothing to do with running away from Physics and Integrals at all. 😂"
+    }
+  },
+  // Q6 - Final boss
+  {
+    q: "After a BCom + MBA + CA, what's your starting salary vs a fresher software engineer?",
+    opts: [
+      "BCom/CA wins easily 💰",
+      "About the same",
+      "The software engineer earns 2x more 😭",
+      "Don't talk to me right now"],
+    correct: 2,
+    phase: "savage",
+    feedback: {
+      correct: "😂 You know the truth and yet HERE YOU ARE, still doing commerce. Respect the commitment to suffering.",
+      wrong: "A fresher dev at a decent company earns ₹8-15 LPA. A BCom fresher averages ₹2-4 LPA. The math is mathing. 📉"
+    }
+  }
+];
+
+let current = 0;
+let score = 0;
+let answered = false;
+
+function render(){
+  const q = questions[current];
+  document.getElementById('qnum').textContent = `Question ${current+1} of ${questions.length}`;
+  document.getElementById('qtext').textContent = q.q;
+  document.getElementById('progress').style.width = `${(current/questions.length)*100}%`;
+  const fb = document.getElementById('feedback');
+  fb.style.display='none';
+  document.getElementById('nextBtn').style.display='none';
+  answered = false;
+
+  const opts = document.getElementById('opts');
+  opts.innerHTML='';
+  q.opts.forEach((o,i)=>{
+    const btn = document.createElement('button');
+    btn.className='opt';
+    btn.textContent = o;
+    btn.onclick = ()=>answer(i);
+    opts.appendChild(btn);
+  });
+}
+
+function answer(idx){
+  if(answered) return;
+  answered = true;
+  const q = questions[current];
+  const optBtns = document.querySelectorAll('.opt');
+  optBtns.forEach(b=>b.classList.add('disabled'));
+  optBtns[q.correct].classList.add('correct');
+  const fb = document.getElementById('feedback');
+
+  if(idx === q.correct){
+    score++;
+    optBtns[idx].classList.add('correct');
+    fb.className = 'feedback ' + (q.phase==='normal'?'good':'roast');
+    fb.textContent = q.feedback.correct;
+  } else {
+    optBtns[idx].classList.add('wrong');
+    fb.className = 'feedback ' + (q.phase==='normal'?'roast':'savage');
+    fb.textContent = q.feedback.wrong;
+  }
+  fb.style.display='block';
+  document.getElementById('nextBtn').style.display='inline-block';
+}
+
+function nextQuestion(){
+  current++;
+  if(current >= questions.length){
+    showResult();
+  } else {
+    render();
+  }
+}
+
+function showResult(){
+  document.getElementById('quiz-screen').style.display='none';
+  const res = document.getElementById('result');
+  res.style.display='block';
+  document.getElementById('progress').style.width='100%';
+
+  const roasts = [
+    `You scored <b>${score}/${questions.length}</b> — which is ironically your future percentile in life too.<br/><br/>
+    Look, Commerce is great. Someone has to calculate the taxes of the people who actually build things. 😇<br/><br/>
+    You will spend 5 years studying BCom, 2 years doing MBA, 3 years for CA — and at the end of it, a 22-year-old with a laptop and a YouTube tutorial will automate your entire job for <b>₹499/month</b>.<br/><br/>
+    But hey — you'll always have Excel. 📊`,
+
+    `${score}/${questions.length} correct. Honestly better than expected for someone who thought <i>"assets = liabilities + equity"</i> was a personality trait.<br/><br/>
+    Commerce students be like: <b>"I'll be a CA!"</b> — 6 attempts later, still on attempt 3. Meanwhile your engineering friend just got a ₹40L package and moved to Bangalore. 😂<br/><br/>
+    The real skill you learned? How to make a Balance Sheet look good while your own finances are completely unbalanced. Respect. 🫡`,
+
+    `Score: ${score}/${questions.length} — but don't worry, in Commerce we round up everything to make it look better. So let's call it ${questions.length}/${questions.length}. That's the spirit! 📈<br/><br/>
+    You chose a field where the entire first year is literally: <b>Debit what comes in, Credit what goes out.</b> One sentence. One year. Efficient use of time. 👏<br/><br/>
+    The good news: the world needs commerce students. Who else will make sure the startup that disrupts your job is properly incorporated? 🙂`
+  ];
+
+  const emojis = ['📉','🫡','😂'];
+  const titles = ['Certified Commerce Survivor 📊', 'Future Excel Wizard 🧙', 'Balance Sheet Braveheart 💼'];
+  const pick = score < 3 ? 2 : score < 5 ? 1 : 0;
+
+  document.getElementById('result-emoji').textContent = emojis[pick];
+  document.getElementById('result-title').textContent = titles[pick];
+  document.getElementById('result-score').textContent = `You got ${score} out of ${questions.length} right`;
+  document.getElementById('result-roast').innerHTML = roasts[Math.floor(Math.random()*roasts.length)];
+}
+
+function restart(){
+  current=0; score=0; answered=false;
+  document.getElementById('result').style.display='none';
+  document.getElementById('quiz-screen').style.display='block';
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
