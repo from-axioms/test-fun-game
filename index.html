@@ -3,135 +3,263 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-  <title>Tap Dash</title>
+  <title>Dots & Boxes</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-    body { background:#0d0d1f; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Segoe UI',sans-serif; color:#fff; overflow:hidden; touch-action:none; }
-    h1 { font-size:1.8rem; color:#f7c948; letter-spacing:3px; margin-bottom:0.3rem; }
-    #score { font-size:1.1rem; color:#aaa; margin-bottom:0.8rem; }
-    #gamearea { position:relative; width:360px; height:500px; background:#12122a; border:2px solid #f7c948; border-radius:12px; overflow:hidden; box-shadow:0 0 40px #f7c94833; }
-    #player { position:absolute; width:44px; height:44px; background:#f7c948; border-radius:50%; box-shadow:0 0 16px #f7c948; display:flex; align-items:center; justify-content:center; font-size:1.5rem; transition:top 0.13s cubic-bezier(.4,2,.6,1); }
-    .obs { position:absolute; background:#ff4466; border-radius:8px; box-shadow:0 0 10px #ff446688; }
-    #overlay { position:absolute; inset:0; background:#0d0d1fcc; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; border-radius:10px; }
+    body { background:#0d0d1f; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; font-family:'Segoe UI',sans-serif; color:#fff; padding:16px; }
+    h1 { font-size:1.6rem; color:#f7c948; letter-spacing:2px; margin-bottom:8px; }
+    #scoreboard { display:flex; gap:24px; margin-bottom:12px; }
+    .player-score { text-align:center; padding:8px 18px; border-radius:10px; font-size:1rem; border:2px solid transparent; transition:all 0.2s; }
+    .player-score.active { transform:scale(1.08); box-shadow:0 0 14px currentColor; }
+    #p1score { background:#1a1a3a; color:#4fc3f7; border-color:#4fc3f7; }
+    #p2score { background:#1a1a3a; color:#ef5350; border-color:#ef5350; }
+    #p1score.active { background:#1a3a5a; }
+    #p2score.active { background:#3a1a1a; }
+    .score-name { font-weight:bold; font-size:0.85rem; letter-spacing:1px; }
+    .score-val { font-size:1.6rem; font-weight:bold; }
+    #turn-indicator { font-size:0.95rem; color:#aaa; margin-bottom:10px; min-height:1.4rem; }
+    canvas { border-radius:10px; cursor:pointer; touch-action:none; }
+    #overlay { position:fixed; inset:0; background:#0d0d1fdd; display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:10; }
     #overlay h2 { font-size:2rem; color:#f7c948; }
-    #overlay p { color:#ccc; font-size:1rem; text-align:center; padding:0 1rem; }
-    .playbtn { padding:0.8rem 2.5rem; background:#f7c948; color:#0d0d1f; border:none; border-radius:30px; font-size:1.2rem; font-weight:bold; cursor:pointer; }
+    #overlay p { color:#ccc; font-size:1.1rem; }
+    .playbtn { padding:0.75rem 2rem; background:#f7c948; color:#0d0d1f; border:none; border-radius:30px; font-size:1.1rem; font-weight:bold; cursor:pointer; }
     .playbtn:active { transform:scale(0.96); }
-    #dpad { display:flex; gap:1.5rem; margin-top:1rem; }
-    .dpbtn { width:80px; height:80px; background:#1e1e3a; border:2px solid #f7c948; border-radius:50%; font-size:2rem; color:#f7c948; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; }
-    .dpbtn:active { background:#2e2e5a; }
-    #hint { color:#444; font-size:0.8rem; margin-top:0.5rem; }
+    #mode-select { display:flex; gap:12px; margin-bottom:12px; }
+    .mode-btn { padding:6px 18px; border-radius:20px; border:2px solid #555; background:transparent; color:#aaa; cursor:pointer; font-size:0.85rem; }
+    .mode-btn.selected { border-color:#f7c948; color:#f7c948; background:#1a1a00; }
   </style>
 </head>
 <body>
-  <h1>⚡ TAP DASH</h1>
-  <div id="score">Score: 0 | Best: 0</div>
-  <div id="gamearea">
-    <div id="player">😎</div>
-    <div id="overlay">
-      <h2>TAP DASH</h2>
-      <p>Dodge the red blocks!<br/>Use ▲▼ buttons to move.</p>
-      <button class="playbtn" onclick="startGame()">▶ Play</button>
+  <h1>🔲 Dots & Boxes</h1>
+  <div id="mode-select">
+    <button class="mode-btn selected" id="btn2p" onclick="setMode('2p')">2 Players</button>
+    <button class="mode-btn" id="btnai" onclick="setMode('ai')">vs CPU</button>
+  </div>
+  <div id="scoreboard">
+    <div class="player-score active" id="p1score">
+      <div class="score-name">🔵 P1</div>
+      <div class="score-val" id="p1val">0</div>
+    </div>
+    <div class="player-score" id="p2score">
+      <div class="score-name" id="p2name">🔴 P2</div>
+      <div class="score-val" id="p2val">0</div>
     </div>
   </div>
-  <div id="dpad">
-    <div class="dpbtn" id="upbtn">▲</div>
-    <div class="dpbtn" id="dnbtn">▼</div>
+  <div id="turn-indicator">Blue's turn</div>
+  <canvas id="c"></canvas>
+
+  <div id="overlay">
+    <h2 id="result-title">Game Over!</h2>
+    <p id="result-sub"></p>
+    <button class="playbtn" onclick="initGame()">Play Again</button>
   </div>
-  <p id="hint">Tap buttons or swipe up/down</p>
 
 <script>
-const area = document.getElementById('gamearea');
-const playerEl = document.getElementById('player');
-const overlay = document.getElementById('overlay');
-const scoreEl = document.getElementById('score');
-const AW = 360, AH = 500, PS = 44;
-const LANES = 5;
-const laneY = l => Math.round((l/(LANES-1))*(AH-PS));
-let lane, score, best=0, running=false, obstacles=[], spawnTimer, raf;
-let touchStartY=0;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const GRID = 5;
+const DOT = 12;
+let CELL, PAD, SIZE;
+let mode = '2p';
 
-function setLane(l){ lane=Math.max(0,Math.min(LANES-1,l)); playerEl.style.top=laneY(lane)+'px'; }
-function up(){ if(running) setLane(lane-1); }
-function dn(){ if(running) setLane(lane+1); }
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn2p').className = 'mode-btn' + (m==='2p'?' selected':'');
+  document.getElementById('btnai').className = 'mode-btn' + (m==='ai'?' selected':'');
+  document.getElementById('p2name').textContent = m==='ai' ? '🤖 CPU' : '🔴 P2';
+  initGame();
+}
 
-document.getElementById('upbtn').addEventListener('touchstart',e=>{e.preventDefault();up();},{passive:false});
-document.getElementById('dnbtn').addEventListener('touchstart',e=>{e.preventDefault();dn();},{passive:false});
-document.getElementById('upbtn').addEventListener('mousedown',up);
-document.getElementById('dnbtn').addEventListener('mousedown',dn);
-area.addEventListener('touchstart',e=>{touchStartY=e.touches[0].clientY;});
-area.addEventListener('touchend',e=>{const dy=e.changedTouches[0].clientY-touchStartY; if(Math.abs(dy)>20){dy<0?up():dn();}});
-document.addEventListener('keydown',e=>{ if(e.key==='ArrowUp'||e.key==='w')up(); if(e.key==='ArrowDown'||e.key==='s')dn(); });
+let hLines, vLines, boxes, scores, turn, gameOver;
 
-function spawnObs(){
-  if(!running) return;
-  const count = score<5?1:score<12?2:3;
-  const available=[0,1,2,3,4];
-  // always keep at least one escape lane near player
-  const safe = lane;
-  const pool = available.filter(l=>l!==safe);
-  const chosen=[];
-  for(let i=0;i<count&&pool.length;i++){
-    const idx=Math.floor(Math.random()*pool.length);
-    chosen.push(pool.splice(idx,1)[0]);
+function initGame() {
+  const maxW = Math.min(window.innerWidth - 32, 400);
+  CELL = Math.floor((maxW - DOT*GRID) / (GRID-1));
+  PAD = 30;
+  SIZE = PAD*2 + (GRID-1)*CELL + DOT*GRID;
+  canvas.width = SIZE; canvas.height = SIZE;
+
+  hLines = Array.from({length:GRID}, ()=>new Array(GRID-1).fill(0));
+  vLines = Array.from({length:GRID-1}, ()=>new Array(GRID).fill(0));
+  boxes  = Array.from({length:GRID-1}, ()=>new Array(GRID-1).fill(0));
+  scores = [0,0];
+  turn = 1; gameOver = false;
+  document.getElementById('overlay').style.display = 'none';
+  updateUI(); draw();
+}
+
+function dotX(c){ return PAD + c*(CELL+DOT) + DOT/2; }
+function dotY(r){ return PAD + r*(CELL+DOT) + DOT/2; }
+
+function updateUI(){
+  document.getElementById('p1val').textContent = scores[0];
+  document.getElementById('p2val').textContent = scores[1];
+  document.getElementById('p1score').className = 'player-score'+(turn===1?' active':'');
+  document.getElementById('p2score').className = 'player-score'+(turn===2?' active':'');
+  if(!gameOver){
+    const name = turn===1 ? "🔵 Blue's turn" : (mode==='ai'?"🤖 CPU's turn":"🔴 Red's turn");
+    document.getElementById('turn-indicator').textContent = name;
   }
-  chosen.forEach(l=>{
-    const el=document.createElement('div');
-    el.className='obs';
-    const h=38+Math.random()*8;
-    el.style.cssText=`width:52px;height:${h}px;top:${laneY(l)+(PS-h)/2}px;left:${AW+10}px`;
-    area.appendChild(el);
-    obstacles.push({el,x:AW+10,l,h});
-  });
 }
 
-let last=0;
-function tick(ts){
-  if(!running) return;
-  const dt=Math.min(ts-last,50); last=ts;
-  const speed=(3+score*0.12)*(dt/16);
-  const PX=55;
-
-  for(let i=obstacles.length-1;i>=0;i--){
-    const ob=obstacles[i];
-    ob.x-=speed;
-    ob.el.style.left=ob.x+'px';
-    // collision
-    const oL=ob.x, oR=ob.x+52, oT=laneY(ob.l)+(PS-ob.h)/2, oB=oT+ob.h;
-    const pL=PX, pR=PX+PS, pT=laneY(lane), pB=pT+PS;
-    if(oL<pR-5&&oR>pL+5&&oT<pB-5&&oB>pT+5){ endGame(); return; }
-    if(ob.x+52<0){ ob.el.remove(); obstacles.splice(i,1); score++; scoreEl.textContent=`Score: ${score} | Best: ${best}`; }
+function draw(){
+  ctx.clearRect(0,0,SIZE,SIZE);
+  for(let r=0;r<GRID-1;r++){
+    for(let c=0;c<GRID-1;c++){
+      if(boxes[r][c]){
+        ctx.fillStyle = boxes[r][c]===1 ? 'rgba(79,195,247,0.3)' : 'rgba(239,83,80,0.3)';
+        ctx.fillRect(dotX(c)+DOT/2, dotY(r)+DOT/2, CELL, CELL);
+        ctx.fillStyle = boxes[r][c]===1 ? '#4fc3f7' : '#ef5350';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('■', dotX(c)+DOT/2+CELL/2, dotY(r)+DOT/2+CELL/2);
+      }
+    }
   }
-  raf=requestAnimationFrame(tick);
+  for(let r=0;r<GRID;r++){
+    for(let c=0;c<GRID-1;c++){
+      const x1=dotX(c)+DOT/2, y1=dotY(r), x2=dotX(c+1)-DOT/2, y2=y1;
+      ctx.strokeStyle = hLines[r][c]===1?'#4fc3f7':hLines[r][c]===2?'#ef5350':'#2a2a4a';
+      ctx.lineWidth = hLines[r][c]?5:2;
+      ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    }
+  }
+  for(let r=0;r<GRID-1;r++){
+    for(let c=0;c<GRID;c++){
+      const x1=dotX(c), y1=dotY(r)+DOT/2, x2=x1, y2=dotY(r+1)-DOT/2;
+      ctx.strokeStyle = vLines[r][c]===1?'#4fc3f7':vLines[r][c]===2?'#ef5350':'#2a2a4a';
+      ctx.lineWidth = vLines[r][c]?5:2;
+      ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    }
+  }
+  for(let r=0;r<GRID;r++){
+    for(let c=0;c<GRID;c++){
+      ctx.fillStyle='#f7c948';
+      ctx.shadowColor='#f7c948'; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.arc(dotX(c),dotY(r),DOT/2,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+    }
+  }
 }
 
-function startGame(){
-  obstacles.forEach(o=>o.el.remove()); obstacles=[];
-  score=0; running=true; last=0;
-  overlay.style.display='none';
-  playerEl.innerHTML='😎';
-  playerEl.style.left='55px';
-  setLane(2);
-  clearInterval(spawnTimer);
-  spawnTimer=setInterval(spawnObs, Math.max(600,1200-score*10));
-  // dynamic interval
-  const dynSpawn=()=>{ if(!running)return; spawnObs(); setTimeout(dynSpawn,Math.max(500,1100-score*15)); };
-  setTimeout(dynSpawn,800);
-  raf=requestAnimationFrame(tick);
+function checkBoxes(player){
+  let scored=0;
+  for(let r=0;r<GRID-1;r++){
+    for(let c=0;c<GRID-1;c++){
+      if(!boxes[r][c] && hLines[r][c] && hLines[r+1][c] && vLines[r][c] && vLines[r][c+1]){
+        boxes[r][c]=player; scores[player-1]++; scored++;
+      }
+    }
+  }
+  return scored;
 }
 
-function endGame(){
-  running=false; clearInterval(spawnTimer); cancelAnimationFrame(raf);
-  if(score>best) best=score;
-  playerEl.innerHTML='💀';
-  setTimeout(()=>{
-    playerEl.innerHTML='😎';
-    overlay.innerHTML=`<h2>💥 Ouch!</h2><p style="color:#f7c948;font-size:1.2rem">Score: ${score} | Best: ${best}</p><p>You dodged <b>${score}</b> blocks!</p><button class="playbtn" onclick="startGame()" style="padding:0.8rem 2.5rem;background:#f7c948;color:#0d0d1f;border:none;border-radius:30px;font-size:1.2rem;font-weight:bold;cursor:pointer;">▶ Try Again</button>`;
-    overlay.style.display='flex';
-  },500);
+function checkGameOver(){
+  const total=(GRID-1)*(GRID-1);
+  if(scores[0]+scores[1]===total){
+    gameOver=true;
+    const t=document.getElementById('result-title');
+    const s=document.getElementById('result-sub');
+    if(scores[0]>scores[1]){ t.textContent='🔵 Blue Wins!'; }
+    else if(scores[1]>scores[0]){ t.textContent=mode==='ai'?'🤖 CPU Wins!':'🔴 Red Wins!'; }
+    else { t.textContent="It's a Draw!"; }
+    s.textContent=`${scores[0]} – ${scores[1]}`;
+    document.getElementById('turn-indicator').textContent='Game over!';
+    document.getElementById('overlay').style.display='flex';
+  }
 }
 
-playerEl.style.left='55px'; setLane(2);
+function makeMove(type, r, c){
+  if(type==='h') hLines[r][c]=turn;
+  else vLines[r][c]=turn;
+  const scored=checkBoxes(turn);
+  if(!scored) turn=turn===1?2:1;
+  updateUI(); draw(); checkGameOver();
+  return scored;
+}
+
+function getHit(x, y){
+  const THRESH=Math.max(20, CELL*0.38);
+  for(let r=0;r<GRID;r++){
+    for(let c=0;c<GRID-1;c++){
+      if(hLines[r][c]) continue;
+      const mx=dotX(c)+DOT/2+CELL/2, my=dotY(r);
+      if(Math.abs(x-mx)<CELL/2+DOT/2 && Math.abs(y-my)<THRESH) return {type:'h',r,c};
+    }
+  }
+  for(let r=0;r<GRID-1;r++){
+    for(let c=0;c<GRID;c++){
+      if(vLines[r][c]) continue;
+      const mx=dotX(c), my=dotY(r)+DOT/2+CELL/2;
+      if(Math.abs(x-mx)<THRESH && Math.abs(y-my)<CELL/2+DOT/2) return {type:'v',r,c};
+    }
+  }
+  return null;
+}
+
+function handleTap(x, y){
+  if(gameOver) return;
+  if(mode==='ai' && turn===2) return;
+  const hit=getHit(x,y);
+  if(!hit) return;
+  const scored=makeMove(hit.type, hit.r, hit.c);
+  if(mode==='ai' && turn===2 && !gameOver) setTimeout(aiMove, scored?150:500);
+}
+
+canvas.addEventListener('click', e=>{
+  const r=canvas.getBoundingClientRect();
+  handleTap(e.clientX-r.left, e.clientY-r.top);
+});
+canvas.addEventListener('touchend', e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect();
+  const t=e.changedTouches[0];
+  handleTap(t.clientX-r.left, t.clientY-r.top);
+},{passive:false});
+
+function sidesOf(r,c){
+  return (hLines[r]?.[c]?1:0)+(hLines[r+1]?.[c]?1:0)+(vLines[r]?.[c]?1:0)+(vLines[r]?.[c+1]?1:0);
+}
+function wouldComplete(type,r,c){
+  if(type==='h'){
+    if(r>0&&!boxes[r-1][c]&&sidesOf(r-1,c)===3) return true;
+    if(r<GRID-1&&!boxes[r][c]&&sidesOf(r,c)===3) return true;
+  } else {
+    if(c>0&&!boxes[r][c-1]&&sidesOf(r,c-1)===3) return true;
+    if(c<GRID-1&&!boxes[r][c]&&sidesOf(r,c)===3) return true;
+  }
+  return false;
+}
+function wouldGiveBox(type,r,c){
+  if(type==='h'){
+    if(r>0&&!boxes[r-1][c]&&sidesOf(r-1,c)===2) return true;
+    if(r<GRID-1&&!boxes[r][c]&&sidesOf(r,c)===2) return true;
+  } else {
+    if(c>0&&!boxes[r][c-1]&&sidesOf(r,c-1)===2) return true;
+    if(c<GRID-1&&!boxes[r][c]&&sidesOf(r,c)===2) return true;
+  }
+  return false;
+}
+
+function aiMove(){
+  if(gameOver||turn!==2) return;
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID-1;c++) if(!hLines[r][c]&&wouldComplete('h',r,c)){
+    makeMove('h',r,c); if(turn===2&&!gameOver) setTimeout(aiMove,300); return;
+  }
+  for(let r=0;r<GRID-1;r++) for(let c=0;c<GRID;c++) if(!vLines[r][c]&&wouldComplete('v',r,c)){
+    makeMove('v',r,c); if(turn===2&&!gameOver) setTimeout(aiMove,300); return;
+  }
+  const safe=[];
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID-1;c++) if(!hLines[r][c]&&!wouldGiveBox('h',r,c)) safe.push({type:'h',r,c});
+  for(let r=0;r<GRID-1;r++) for(let c=0;c<GRID;c++) if(!vLines[r][c]&&!wouldGiveBox('v',r,c)) safe.push({type:'v',r,c});
+  if(safe.length){ const m=safe[Math.floor(Math.random()*safe.length)]; makeMove(m.type,m.r,m.c); return; }
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID-1;c++) if(!hLines[r][c]){ makeMove('h',r,c); return; }
+  for(let r=0;r<GRID-1;r++) for(let c=0;c<GRID;c++) if(!vLines[r][c]){ makeMove('v',r,c); return; }
+}
+
+initGame();
 </script>
 </body>
 </html>
